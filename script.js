@@ -13,7 +13,7 @@ const GAME_COPY = {
   [GAME_STATES.IDLE]: {
     chip: "Idle",
     title: "Ready to begin",
-    subtitle: "Press Start to initialize the reaction test.",
+    subtitle: "Press Start or tap Space to initialize the reaction test.",
     message: "Standing by."
   },
   [GAME_STATES.WAITING]: {
@@ -48,10 +48,12 @@ const appState = {
   stimulusTimeoutId: null,
   isRoundActive: false,
   reactionTimes: [],
-  falseStarts: 0
+  falseStarts: 0,
+  hasStartedOnce: false
 };
 
 const ui = {
+  instructionPanel: document.getElementById("instruction-panel"),
   reactionZone: document.getElementById("reaction-zone"),
   stateChip: document.getElementById("state-chip"),
   zoneTitle: document.getElementById("zone-title"),
@@ -68,6 +70,7 @@ const ui = {
 };
 
 const visuals = createReactionLabScene(document.getElementById("three-root"));
+const soundFx = createSoundFx();
 
 function setGameState(nextState) {
   appState.gameState = nextState;
@@ -93,6 +96,10 @@ function setGameState(nextState) {
 
 function updateLatestResult(text) {
   ui.latestResult.textContent = text;
+}
+
+function updateInstructionVisibility() {
+  ui.instructionPanel.classList.toggle("is-hidden", appState.hasStartedOnce);
 }
 
 function updateStats() {
@@ -137,6 +144,8 @@ function beginRound() {
   fullyDisarmRound();
 
   appState.isRoundActive = true;
+  appState.hasStartedOnce = true;
+  updateInstructionVisibility();
   updateLatestResult("—");
   setGameState(GAME_STATES.WAITING);
 
@@ -159,6 +168,7 @@ function recordFalseStart() {
     return;
   }
 
+  soundFx.playFalseStart();
   appState.falseStarts += 1;
   updateStats();
   updateLatestResult("False start");
@@ -172,20 +182,26 @@ function recordReaction() {
   }
 
   const reactionTime = performance.now() - appState.startTimestamp;
+  const scoreBand = getReactionBand(reactionTime);
   appState.reactionTimes.push(reactionTime);
 
+  soundFx.playSuccess();
   updateLatestResult(`${reactionTime.toFixed(1)} ms`);
   updateStats();
+  updateInstructionVisibility();
   fullyDisarmRound();
   setGameState(GAME_STATES.RESULT);
+  ui.systemMessage.textContent = `${scoreBand.label} ${reactionTime.toFixed(1)} ms. ${scoreBand.note}`;
 }
 
 function resetSession() {
   fullyDisarmRound();
   appState.reactionTimes = [];
   appState.falseStarts = 0;
+  appState.hasStartedOnce = false;
   updateLatestResult("—");
   updateStats();
+  updateInstructionVisibility();
   setGameState(GAME_STATES.IDLE);
 }
 
@@ -198,7 +214,7 @@ function handleReactionZonePress() {
       recordReaction();
       break;
     case GAME_STATES.IDLE:
-      ui.systemMessage.textContent = "Press Start to begin a round.";
+      ui.systemMessage.textContent = "Press Start or tap Space to begin a round.";
       break;
     case GAME_STATES.FALSE_START:
       ui.systemMessage.textContent = "Use Replay to re-arm the test or Reset to clear the session.";
@@ -213,10 +229,7 @@ function handleReactionZonePress() {
 
 function bindEvents() {
   ui.startBtn.addEventListener("click", () => {
-    if (appState.gameState === GAME_STATES.WAITING || appState.gameState === GAME_STATES.READY) {
-      return;
-    }
-    beginRound();
+    startRoundFromControls();
   });
 
   ui.replayBtn.addEventListener("click", () => {
@@ -237,10 +250,30 @@ function bindEvents() {
       return;
     }
 
-    const activeTag = document.activeElement?.tagName;
-    const isButtonFocused = activeTag === "BUTTON";
+    const activeElement = document.activeElement;
+    const activeTag = activeElement?.tagName;
+    const isTypingTarget =
+      activeTag === "INPUT" ||
+      activeTag === "TEXTAREA" ||
+      activeTag === "SELECT" ||
+      activeElement?.isContentEditable;
 
-    if (!isButtonFocused) {
+    if (isSpace && !isTypingTarget) {
+      event.preventDefault();
+
+      if (
+        appState.gameState === GAME_STATES.IDLE ||
+        appState.gameState === GAME_STATES.RESULT ||
+        appState.gameState === GAME_STATES.FALSE_START
+      ) {
+        startRoundFromControls();
+        return;
+      }
+
+      handleReactionZonePress();
+    }
+
+    if (isEnter && !isTypingTarget) {
       event.preventDefault();
       handleReactionZonePress();
     }
@@ -261,9 +294,162 @@ function initialize() {
 
 initialize();
 
+function startRoundFromControls() {
+  if (appState.gameState === GAME_STATES.WAITING || appState.gameState === GAME_STATES.READY) {
+    return;
+  }
+
+  beginRound();
+}
+
+function getReactionBand(reactionTime) {
+  if (reactionTime < 240) {
+    return {
+      label: "Amazing.",
+      note: "That was seriously fast."
+    };
+  }
+
+  if (reactionTime < 300) {
+    return {
+      label: "Great.",
+      note: "Very quick reaction."
+    };
+  }
+
+  if (reactionTime < 400) {
+    return {
+      label: "Good.",
+      note: "Nice timing."
+    };
+  }
+
+  if (reactionTime < 500) {
+    return {
+      label: "Average.",
+      note: "Pretty normal reaction time."
+    };
+  }
+
+  if (reactionTime < 650) {
+    return {
+      label: "Bad.",
+      note: "A little slow that time."
+    };
+  }
+
+  return {
+    label: "Pathetic.",
+    note: "That one was very slow."
+  };
+}
+
+function createSoundFx() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  let audioContext = null;
+
+  function getContext() {
+    if (!AudioContextClass) {
+      return null;
+    }
+
+    if (!audioContext) {
+      audioContext = new AudioContextClass();
+    }
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume();
+    }
+
+    return audioContext;
+  }
+
+  function playSuccess() {
+    const context = getContext();
+
+    if (!context) {
+      return;
+    }
+
+    const now = context.currentTime;
+    const master = context.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+    master.connect(context.destination);
+
+    [1320, 1760, 2410].forEach((frequency, index) => {
+      const osc = context.createOscillator();
+      const gain = context.createGain();
+      osc.type = index === 0 ? "triangle" : "sine";
+      osc.frequency.setValueAtTime(frequency, now);
+      osc.frequency.exponentialRampToValueAtTime(frequency * 0.72, now + 0.85);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.24 / (index + 1.2), now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9 + index * 0.06);
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start(now + index * 0.01);
+      osc.stop(now + 1 + index * 0.06);
+    });
+  }
+
+  function playFalseStart() {
+    const context = getContext();
+
+    if (!context) {
+      return;
+    }
+
+    const now = context.currentTime;
+    const duration = 0.6;
+    const bufferSize = Math.max(1, Math.floor(context.sampleRate * duration));
+    const buffer = context.createBuffer(1, bufferSize, context.sampleRate);
+    const channel = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i += 1) {
+      const progress = i / bufferSize;
+      const envelope = Math.pow(1 - progress, 2.2);
+      channel[i] = (Math.random() * 2 - 1) * envelope * 0.6;
+    }
+
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+
+    const bandpass = context.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.frequency.setValueAtTime(240, now);
+    bandpass.frequency.exponentialRampToValueAtTime(110, now + duration);
+    bandpass.Q.value = 0.9;
+
+    const lowpass = context.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.setValueAtTime(700, now);
+    lowpass.frequency.exponentialRampToValueAtTime(180, now + duration);
+
+    const master = context.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.26, now + 0.02);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    source.connect(bandpass);
+    bandpass.connect(lowpass);
+    lowpass.connect(master);
+    master.connect(context.destination);
+
+    source.start(now);
+    source.stop(now + duration);
+  }
+
+  return {
+    playSuccess,
+    playFalseStart
+  };
+}
+
 function createReactionLabScene(container) {
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x08101b, 0.055);
+  scene.fog = new THREE.FogExp2(0x08101b, 0.048);
 
   const camera = new THREE.PerspectiveCamera(
     55,
@@ -427,7 +613,7 @@ function createReactionLabScene(container) {
       baseAngle: angle,
       radius,
       heightOffset: mesh.position.y,
-      speed: 0.3 + (i % 5) * 0.05,
+      speed: 0.5 + (i % 5) * 0.08,
       direction: i % 2 === 0 ? 1 : -1
     });
   }
@@ -454,7 +640,7 @@ function createReactionLabScene(container) {
     particlesGroup.add(particle);
     particles.push({
       mesh: particle,
-      drift: 0.08 + Math.random() * 0.12,
+      drift: 0.18 + Math.random() * 0.2,
       phase: Math.random() * Math.PI * 2
     });
   }
@@ -543,36 +729,39 @@ function createReactionLabScene(container) {
     const elapsed = clock.getElapsedTime();
     const theme = themeMap[mode];
 
-    labGroup.rotation.y = Math.sin(elapsed * 0.16) * 0.14;
-    ringGroup.rotation.y += 0.0025 * theme.speed;
-    ringGroup.rotation.x = Math.sin(elapsed * 0.22) * 0.06;
+    labGroup.rotation.y = Math.sin(elapsed * 0.24) * 0.22;
+    labGroup.rotation.x = Math.cos(elapsed * 0.18) * 0.04;
+    ringGroup.rotation.y += 0.0048 * theme.speed;
+    ringGroup.rotation.x = Math.sin(elapsed * 0.42) * 0.12;
 
-    rings[0].rotation.z += 0.004 * theme.speed;
-    rings[1].rotation.z -= 0.003 * theme.speed;
-    rings[2].rotation.z += 0.002 * theme.speed;
+    rings[0].rotation.z += 0.007 * theme.speed;
+    rings[1].rotation.z -= 0.005 * theme.speed;
+    rings[2].rotation.z += 0.004 * theme.speed;
 
-    core.rotation.x += 0.006 * theme.speed;
-    core.rotation.y += 0.008 * theme.speed;
+    core.rotation.x += 0.01 * theme.speed;
+    core.rotation.y += 0.014 * theme.speed;
 
-    shell.rotation.x -= 0.004 * theme.speed;
-    shell.rotation.y += 0.005 * theme.speed;
-    shell.scale.setScalar(1 + Math.sin(elapsed * 1.8) * 0.04 * theme.pulse);
+    shell.rotation.x -= 0.007 * theme.speed;
+    shell.rotation.y += 0.009 * theme.speed;
+    shell.scale.setScalar(1 + Math.sin(elapsed * 2.1) * 0.07 * theme.pulse);
 
-    coreGroup.position.y = 0.6 + Math.sin(elapsed * 1.35) * 0.18 * theme.pulse;
+    coreGroup.position.y = 0.6 + Math.sin(elapsed * 1.8) * 0.34 * theme.pulse;
+    coreGroup.position.x = Math.sin(elapsed * 0.95) * 0.22;
 
     drones.forEach((drone, index) => {
       const t = elapsed * drone.speed * theme.speed;
-      const angle = drone.baseAngle + t * 0.45 * drone.direction;
-      drone.mesh.position.x = Math.cos(angle) * drone.radius;
-      drone.mesh.position.z = Math.sin(angle) * drone.radius;
-      drone.mesh.position.y = drone.heightOffset + Math.sin(t + index) * 0.24;
-      drone.mesh.rotation.x += 0.015 * theme.speed;
-      drone.mesh.rotation.y += 0.02 * theme.speed;
+      const angle = drone.baseAngle + t * 0.7 * drone.direction;
+      drone.mesh.position.x = Math.cos(angle) * (drone.radius + Math.sin(t * 0.8 + index) * 0.35);
+      drone.mesh.position.z = Math.sin(angle) * (drone.radius + Math.cos(t * 0.7 + index) * 0.45);
+      drone.mesh.position.y = drone.heightOffset + Math.sin(t * 1.3 + index) * 0.46;
+      drone.mesh.rotation.x += 0.024 * theme.speed;
+      drone.mesh.rotation.y += 0.03 * theme.speed;
     });
 
     particles.forEach((particle, index) => {
-      particle.mesh.position.y += Math.sin(elapsed * particle.drift + particle.phase) * 0.0025;
-      particle.mesh.position.x += Math.cos(elapsed * particle.drift * 0.7 + index) * 0.0012;
+      particle.mesh.position.y += Math.sin(elapsed * particle.drift + particle.phase) * 0.006;
+      particle.mesh.position.x += Math.cos(elapsed * particle.drift * 0.9 + index) * 0.0034;
+      particle.mesh.position.z += Math.sin(elapsed * particle.drift * 0.6 + index) * 0.0024;
       particle.mesh.material.opacity = 0.25 + (Math.sin(elapsed * 1.2 + particle.phase) + 1) * 0.2;
     });
 
@@ -580,8 +769,8 @@ function createReactionLabScene(container) {
     fillLight.intensity = 6 + Math.sin(elapsed * 1.7 + 1) * 0.4 + theme.pulse * 0.8;
     rimLight.intensity = 5 + Math.sin(elapsed * 2.1 + 2) * 0.35 + theme.pulse * 0.9;
 
-    camera.position.x = Math.sin(elapsed * 0.18) * 0.7;
-    camera.position.y = 2.4 + Math.cos(elapsed * 0.22) * 0.18;
+    camera.position.x = Math.sin(elapsed * 0.28) * 1.05;
+    camera.position.y = 2.4 + Math.cos(elapsed * 0.34) * 0.3;
     camera.lookAt(0, 0.2, 0);
 
     renderer.render(scene, camera);

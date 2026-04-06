@@ -164,6 +164,24 @@ h1 {
 
 .instruction-panel {
   margin-bottom: 18px;
+  transition:
+    opacity var(--transition),
+    transform var(--transition),
+    max-height 320ms ease,
+    margin-bottom var(--transition),
+    padding var(--transition),
+    border-color var(--transition);
+}
+
+.instruction-panel.is-hidden {
+  opacity: 0;
+  transform: translateY(-10px);
+  max-height: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-color: transparent;
+  overflow: hidden;
 }
 
 .instructions-list {
@@ -175,6 +193,13 @@ h1 {
 
 .instructions-list li + li {
   margin-top: 6px;
+}
+
+.score-explainer {
+  margin: 14px 0 0;
+  color: rgba(248, 250, 252, 0.78);
+  line-height: 1.6;
+  font-size: 0.95rem;
 }
 
 .status-panel {
@@ -201,27 +226,35 @@ h1 {
   position: relative;
   width: 100%;
   min-height: 250px;
-  border: 1px solid var(--border);
-  border-radius: 26px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
   background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.78)),
-    radial-gradient(circle at 50% 30%, rgba(56, 189, 248, 0.12), transparent 50%);
+    radial-gradient(circle at 50% 24%, rgba(255, 255, 255, 0.16), transparent 22%),
+    linear-gradient(180deg, rgba(73, 107, 156, 0.95) 0%, rgba(18, 35, 62, 0.92) 48%, rgba(10, 20, 38, 0.98) 100%);
   color: var(--text);
   display: grid;
   place-items: center;
   text-align: center;
-  padding: 24px;
+  padding: 32px 28px;
   overflow: hidden;
   transition:
     transform var(--transition),
     border-color var(--transition),
     background var(--transition),
-    box-shadow var(--transition);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), var(--shadow-md);
+    box-shadow var(--transition),
+    filter var(--transition);
+  box-shadow:
+    inset 0 12px 28px rgba(255, 255, 255, 0.08),
+    inset 0 -24px 36px rgba(2, 8, 23, 0.48),
+    0 24px 40px rgba(2, 8, 23, 0.34),
+    0 42px 80px rgba(2, 8, 23, 0.28);
+  transform-style: preserve-3d;
+  animation: cylinderFloat 5.5s ease-in-out infinite;
 }
 
 .reaction-zone:hover {
-  transform: translateY(-1px);
+  transform: translateY(-5px) rotateX(6deg) rotateY(-5deg);
+  filter: brightness(1.03);
 }
 
 .reaction-zone:focus-visible,
@@ -236,6 +269,35 @@ h1 {
   position: relative;
   z-index: 1;
   display: block;
+  text-shadow: 0 6px 18px rgba(2, 8, 23, 0.42);
+}
+
+.reaction-zone::before,
+.reaction-zone::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 26px);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.reaction-zone::before {
+  top: 10px;
+  height: 42%;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255, 255, 255, 0.2), transparent 45%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+  opacity: 0.9;
+}
+
+.reaction-zone::after {
+  bottom: 10px;
+  height: 28px;
+  background: radial-gradient(circle at 50% 50%, rgba(2, 8, 23, 0.45), rgba(2, 8, 23, 0) 72%);
+  filter: blur(6px);
+  opacity: 0.75;
 }
 
 .zone-kicker {
@@ -301,45 +363,55 @@ h1 {
 .reaction-zone.state-waiting {
   border-color: rgba(245, 158, 11, 0.45);
   background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(69, 46, 3, 0.75)),
-    radial-gradient(circle at 50% 30%, rgba(245, 158, 11, 0.18), transparent 50%);
+    radial-gradient(circle at 50% 22%, rgba(255, 244, 214, 0.18), transparent 24%),
+    linear-gradient(180deg, rgba(106, 73, 16, 0.96), rgba(72, 44, 8, 0.9) 48%, rgba(44, 24, 3, 0.98) 100%);
   box-shadow:
     0 0 0 1px rgba(245, 158, 11, 0.16),
-    0 0 34px rgba(245, 158, 11, 0.1),
-    var(--shadow-md);
+    0 16px 42px rgba(245, 158, 11, 0.12),
+    0 42px 80px rgba(2, 8, 23, 0.26);
 }
 
 .reaction-zone.state-ready {
   border-color: rgba(34, 197, 94, 0.48);
   background:
-    linear-gradient(180deg, rgba(6, 28, 18, 0.96), rgba(15, 60, 33, 0.75)),
-    radial-gradient(circle at 50% 30%, rgba(34, 197, 94, 0.2), transparent 50%);
+    radial-gradient(circle at 50% 22%, rgba(217, 255, 233, 0.18), transparent 24%),
+    linear-gradient(180deg, rgba(16, 87, 48, 0.96), rgba(11, 66, 36, 0.9) 50%, rgba(5, 37, 19, 0.98) 100%);
   box-shadow:
     0 0 0 1px rgba(34, 197, 94, 0.16),
-    0 0 44px rgba(34, 197, 94, 0.14),
-    var(--shadow-md);
+    0 18px 46px rgba(34, 197, 94, 0.14),
+    0 42px 80px rgba(2, 8, 23, 0.26);
 }
 
 .reaction-zone.state-false-start {
   border-color: rgba(249, 115, 22, 0.5);
   background:
-    linear-gradient(180deg, rgba(45, 19, 5, 0.96), rgba(92, 37, 9, 0.75)),
-    radial-gradient(circle at 50% 30%, rgba(249, 115, 22, 0.2), transparent 50%);
+    radial-gradient(circle at 50% 22%, rgba(255, 224, 208, 0.16), transparent 24%),
+    linear-gradient(180deg, rgba(121, 54, 17, 0.96), rgba(94, 36, 10, 0.9) 50%, rgba(56, 20, 6, 0.98) 100%);
   box-shadow:
     0 0 0 1px rgba(249, 115, 22, 0.18),
-    0 0 40px rgba(249, 115, 22, 0.12),
-    var(--shadow-md);
+    0 18px 44px rgba(249, 115, 22, 0.14),
+    0 42px 80px rgba(2, 8, 23, 0.26);
 }
 
 .reaction-zone.state-result {
   border-color: rgba(56, 189, 248, 0.5);
   background:
-    linear-gradient(180deg, rgba(8, 20, 42, 0.96), rgba(13, 34, 68, 0.75)),
-    radial-gradient(circle at 50% 30%, rgba(56, 189, 248, 0.22), transparent 50%);
+    radial-gradient(circle at 50% 22%, rgba(224, 247, 255, 0.18), transparent 24%),
+    linear-gradient(180deg, rgba(31, 89, 140, 0.96), rgba(17, 51, 91, 0.9) 50%, rgba(8, 23, 52, 0.98) 100%);
   box-shadow:
     0 0 0 1px rgba(56, 189, 248, 0.18),
-    0 0 40px rgba(56, 189, 248, 0.12),
-    var(--shadow-md);
+    0 18px 46px rgba(56, 189, 248, 0.14),
+    0 42px 80px rgba(2, 8, 23, 0.26);
+}
+
+@keyframes cylinderFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotateX(7deg) rotateY(-7deg);
+  }
+  50% {
+    transform: translateY(-8px) rotateX(11deg) rotateY(7deg);
+  }
 }
 
 .result-row {
@@ -464,17 +536,45 @@ h1 {
 
 @media (max-width: 560px) {
   .layout {
-    padding: 18px 12px;
+    padding: 10px 10px 14px;
   }
 
   .game-card {
-    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
     border-radius: 22px;
   }
 
+  .game-header {
+    order: 1;
+    margin-bottom: 14px;
+  }
+
+  .instruction-panel {
+    order: 2;
+    margin-bottom: 12px;
+    padding: 14px;
+  }
+
+  .status-panel {
+    order: 3;
+    margin-bottom: 12px;
+  }
+
+  .controls-panel {
+    order: 4;
+    margin-top: 0;
+  }
+
+  .stats-panel {
+    order: 5;
+    margin-bottom: 0;
+  }
+
   .reaction-zone {
-    min-height: 220px;
-    padding: 20px;
+    min-height: 180px;
+    padding: 18px 16px;
   }
 
   .result-row,
@@ -491,11 +591,15 @@ h1 {
   }
 
   .zone-title {
-    font-size: 1.6rem;
+    font-size: 1.45rem;
   }
 
   .zone-subtitle {
-    font-size: 0.94rem;
+    font-size: 0.9rem;
+  }
+
+  .control-btn {
+    padding: 12px 16px;
   }
 }
 
