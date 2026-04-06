@@ -68,5 +68,3 @@ Use the VS Code Live Server extension for easier testing.
 - Sound playback depends on browser autoplay and user interaction rules, so sounds usually begin after your first click or key press.
 
 ## Author
-
-Built by Jared Vass.
