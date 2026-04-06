@@ -1,0 +1,113 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reaction Lab</title>
+  <meta
+    name="description"
+    content="A polished Reaction Timer Game built with HTML, CSS, vanilla JavaScript, and Three.js."
+  />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <div id="three-root" aria-hidden="true"></div>
+    <div class="bg-overlay"></div>
+
+    <main class="layout">
+      <section class="game-card" aria-labelledby="game-title">
+        <div class="card-glow"></div>
+
+        <header class="game-header">
+          <p class="eyebrow">Portfolio Demo • JavaScript Timing • UX State Control</p>
+          <h1 id="game-title">Reaction Lab</h1>
+          <p class="subtitle">
+            Wait for the signal, then tap fast. Click too early and it counts as a false start.
+          </p>
+        </header>
+
+        <section class="instruction-panel" aria-labelledby="instructions-title">
+          <h2 id="instructions-title" class="section-title">How it works</h2>
+          <ol class="instructions-list">
+            <li>Press Start to arm the test.</li>
+            <li>Wait through a random delay between 1 and 5 seconds.</li>
+            <li>When the panel turns green and says GO, tap immediately.</li>
+            <li>If you click before the signal, you trigger a false start.</li>
+          </ol>
+        </section>
+
+        <section class="status-panel" aria-live="polite" aria-atomic="true">
+          <div class="state-chip" id="state-chip">Idle</div>
+
+          <button
+            id="reaction-zone"
+            class="reaction-zone state-idle"
+            type="button"
+            aria-label="Reaction test area"
+          >
+            <span class="zone-kicker">System Status</span>
+            <span class="zone-title" id="zone-title">Ready to begin</span>
+            <span class="zone-subtitle" id="zone-subtitle">
+              Press Start to initialize the reaction test.
+            </span>
+            <span class="pulse-ring pulse-ring-1" aria-hidden="true"></span>
+            <span class="pulse-ring pulse-ring-2" aria-hidden="true"></span>
+          </button>
+
+          <div class="result-row">
+            <div class="result-card">
+              <span class="label">Latest Result</span>
+              <strong id="latest-result">—</strong>
+            </div>
+            <div class="result-card">
+              <span class="label">System Message</span>
+              <strong id="system-message">Standing by.</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="stats-panel" aria-labelledby="stats-title">
+          <div class="panel-head">
+            <h2 id="stats-title" class="section-title">Session stats</h2>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat-box">
+              <span class="stat-label">Best Time</span>
+              <strong class="stat-value" id="best-time">—</strong>
+            </article>
+            <article class="stat-box">
+              <span class="stat-label">Average Time</span>
+              <strong class="stat-value" id="average-time">—</strong>
+            </article>
+            <article class="stat-box">
+              <span class="stat-label">Valid Attempts</span>
+              <strong class="stat-value" id="attempt-count">0</strong>
+            </article>
+            <article class="stat-box">
+              <span class="stat-label">False Starts</span>
+              <strong class="stat-value" id="false-start-count">0</strong>
+            </article>
+          </div>
+        </section>
+
+        <section class="controls-panel" aria-label="Game controls">
+          <button id="start-btn" class="control-btn primary" type="button">Start</button>
+          <button id="replay-btn" class="control-btn" type="button">Replay</button>
+          <button id="reset-btn" class="control-btn danger" type="button">Reset</button>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
